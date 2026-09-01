@@ -1,0 +1,5 @@
+"use client";
+import { useEffect, useSyncExternalStore } from "react";
+import { getNoorTheme } from "../../packages/theme";
+function subscribeOnline(onChange: () => void) { window.addEventListener("online", onChange); window.addEventListener("offline", onChange); return () => { window.removeEventListener("online", onChange); window.removeEventListener("offline", onChange); }; }
+export function RuntimePolish() { const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true); useEffect(() => { const theme = getNoorTheme({ hour: new Date().getHours(), progress: 60, prayer: "Asr" }); document.documentElement.dataset.theme = theme.name; document.documentElement.dataset.accent = theme.accent; document.documentElement.dataset.font = window.localStorage.getItem("noor:font-size") ?? "medium"; if ("serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js"); }, []); return online ? null : <div className="offline-notice" role="status">Offline mode · Quran, bookmarks, prayer calculations, and lessons remain available. Reconnect for coaching.</div>; }

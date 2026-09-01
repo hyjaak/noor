@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { prisma } from "../../../lib/prisma";
+import { requireCurrentUser } from "../../../lib/current-user";
+import { apiError } from "../../../lib/api-errors";
+export async function GET() { try { const user = await requireCurrentUser(); const since = new Date(); since.setDate(since.getDate() - 30); const [habits, prayers] = await Promise.all([prisma.habit.findMany({ where: { userId: user.id } }), prisma.prayerEvent.findMany({ where: { userId: user.id, createdAt: { gte: since } }, orderBy: { createdAt: "desc" } })]); const activeDays = new Set([...habits.filter((habit) => habit.completedAt).map((habit) => habit.completedAt?.toISOString().slice(0, 10)), ...prayers.map((prayer) => prayer.createdAt.toISOString().slice(0, 10))]); return NextResponse.json({ status: "real", data: { streakDays: activeDays.size, completedPrayersToday: prayers.filter((prayer) => prayer.createdAt.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)).length } }); } catch (error) { return apiError(error); } }

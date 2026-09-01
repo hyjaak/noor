@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { type Permissions } from "../../../../packages/access";
+import { prisma } from "../../../lib/prisma";
+import { requireCurrentUser } from "../../../lib/current-user";
+import { apiError } from "../../../lib/api-errors";
+export async function GET() { try { const user = await requireCurrentUser(); return NextResponse.json({ status: "real", data: await prisma.familyMember.findMany({ where: { childId: user.id } }) }); } catch (error) { return apiError(error); } }
+export async function POST(request: Request) { try { const user = await requireCurrentUser(); const body = await request.json() as { parentId?: string; parentEmail?: string; permissions?: Permissions }; const parent = body.parentId ? await prisma.user.findUnique({ where: { id: body.parentId } }) : body.parentEmail ? await prisma.user.findUnique({ where: { email: body.parentEmail } }) : null; if (!parent) return NextResponse.json({ error: "A parent account is required." }, { status: 400 }); const relationship = await prisma.familyMember.upsert({ where: { parentId_childId: { parentId: parent.id, childId: user.id } }, update: { permissions: body.permissions ?? {} }, create: { parentId: parent.id, childId: user.id, permissions: body.permissions ?? {}, status: "pending" } }); return NextResponse.json({ status: "real", data: relationship }, { status: 201 }); } catch (error) { return apiError(error); } }

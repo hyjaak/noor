@@ -1,0 +1,218 @@
+datasource db {
+	provider  = "postgresql"
+	url       = env("DATABASE_URL")
+	directUrl = env("DIRECT_URL")
+}
+
+generator client {
+	provider = "prisma-client-js"
+}
+
+model User {
+	id                 String                @id @default(cuid())
+	email              String                @unique
+	name               String?
+	settings           Settings?
+	bookmarks          Bookmark[]
+	position           QuranPosition?
+	goals              DailyGoal[]
+	prayerEvents       PrayerEvent[]
+	habits             Habit[]
+	events             LearningEvent[]
+	skills             LearningSkill[]
+	quranProgress      QuranProgress[]
+	ayahProgress       AyahProgress[]
+	memorization       MemorizationState[]
+	audioSessions      AudioSession[]
+	familyAsParent     FamilyMember[]        @relation("FamilyParent")
+	familyAsChild      FamilyMember[]        @relation("FamilyChild")
+	teacherLinks       TeacherRelationship[] @relation("TeacherStudent")
+	studentLinks       TeacherRelationship[] @relation("TeacherOwner")
+	createdAt          DateTime              @default(now())
+}
+
+model Settings {
+	id                    String   @id @default(cuid())
+	userId                String   @unique
+	user                  User     @relation(fields: [userId], references: [id])
+	location              String   @default("New York, NY")
+	latitude              Float    @default(40.7128)
+	longitude             Float    @default(-74.006)
+	locationSet           Boolean  @default(false)
+	learningLevel         String   @default("adult_beginner")
+	madhab                String   @default("shafii")
+	theme                 String   @default("noor")
+	font                  String   @default("medium")
+	translation           String   @default("Sahih International")
+	transliteration       Boolean  @default(false)
+	recitationVoice       String   @default("Mishary Alafasy")
+	recordingRetention    String   @default("session")
+	calculationMethod     String   @default("MWL")
+	prayerOffsets         Json     @default("{}")
+	notifications         Boolean  @default(true)
+	silenceEnabled        Boolean  @default(true)
+	silenceWindowMinutes  Int      @default(15)
+	language              String   @default("English")
+}
+
+model Bookmark {
+	id        String   @id @default(cuid())
+	userId    String
+	surah     Int
+	ayah      Int
+	note      String?
+	createdAt DateTime @default(now())
+	user      User     @relation(fields: [userId], references: [id])
+	@@unique([userId, surah, ayah])
+}
+
+model QuranPosition {
+	id        String   @id @default(cuid())
+	userId    String   @unique
+	surah     Int
+	ayah      Int
+	page      Int?
+	updatedAt DateTime @updatedAt
+	user      User     @relation(fields: [userId], references: [id])
+}
+
+model DailyGoal {
+	id       String   @id @default(cuid())
+	userId   String
+	date     DateTime
+	progress Int      @default(0)
+	target   Int      @default(5)
+	user     User     @relation(fields: [userId], references: [id])
+	@@unique([userId, date])
+}
+
+model PrayerEvent {
+	id        String   @id @default(cuid())
+	userId    String
+	prayer    String
+	completed Boolean  @default(true)
+	createdAt DateTime @default(now())
+	user      User     @relation(fields: [userId], references: [id])
+}
+
+model Habit {
+	id          String   @id @default(cuid())
+	userId      String
+	label       String
+	completedAt DateTime?
+	user        User     @relation(fields: [userId], references: [id])
+}
+
+model LearningEvent {
+	id        String   @id @default(cuid())
+	userId    String
+	type      String
+	payload   Json
+	createdAt DateTime @default(now())
+	user      User     @relation(fields: [userId], references: [id])
+}
+
+model LearningSkill {
+	id        String   @id @default(cuid())
+	userId    String
+	category  String
+	score     Float
+	status    String
+	updatedAt DateTime @updatedAt
+	user      User     @relation(fields: [userId], references: [id])
+	@@unique([userId, category])
+}
+
+model QuranProgress {
+	id         String   @id @default(cuid())
+	userId     String
+	surah      Int
+	percentage Float
+	readAyahs  Int
+	totalAyahs Int
+	updatedAt  DateTime @updatedAt
+	user       User     @relation(fields: [userId], references: [id])
+	@@unique([userId, surah])
+}
+
+model AyahProgress {
+	id         String    @id @default(cuid())
+	userId     String
+	surah      Int
+	ayah       Int
+	readCount  Int       @default(0)
+	lastReadAt DateTime?
+	user       User      @relation(fields: [userId], references: [id])
+	@@unique([userId, surah, ayah])
+}
+
+model Lesson {
+	id        String  @id
+	title     String
+	target    String
+	level     String
+	content   Json
+	published Boolean @default(true)
+}
+
+model MemorizationState {
+	id          String   @id @default(cuid())
+	userId      String
+	surah       Int
+	ayah        Int
+	ease        Float    @default(2.5)
+	interval    Int      @default(0)
+	repetitions Int      @default(0)
+	dueAt       DateTime
+	user        User     @relation(fields: [userId], references: [id])
+	@@unique([userId, surah, ayah])
+}
+
+model AudioSession {
+	id          String              @id @default(cuid())
+	userId      String
+	surah       Int
+	ayah        Int
+	storageMode String              @default("session")
+	expiresAt   DateTime?
+	createdAt   DateTime            @default(now())
+	user        User                @relation(fields: [userId], references: [id])
+	attempts    RecitationAttempt[]
+}
+
+model RecitationAttempt {
+	id              String       @id @default(cuid())
+	audioSessionId  String
+	durationSeconds Float
+	audioBytes      Int
+	accuracy        Float
+	pronunciation   Float
+	fluency         Float
+	feedback        Json
+	createdAt       DateTime     @default(now())
+	audioSession    AudioSession @relation(fields: [audioSessionId], references: [id])
+}
+
+model FamilyMember {
+	id          String   @id @default(cuid())
+	parentId    String
+	childId     String
+	permissions Json     @default("{}")
+	status      String   @default("pending")
+	createdAt   DateTime @default(now())
+	parent      User     @relation("FamilyParent", fields: [parentId], references: [id])
+	child       User     @relation("FamilyChild", fields: [childId], references: [id])
+	@@unique([parentId, childId])
+}
+
+model TeacherRelationship {
+	id          String   @id @default(cuid())
+	teacherId   String
+	studentId   String
+	permissions Json     @default("{}")
+	status      String   @default("pending")
+	createdAt   DateTime @default(now())
+	teacher     User     @relation("TeacherOwner", fields: [teacherId], references: [id])
+	student     User     @relation("TeacherStudent", fields: [studentId], references: [id])
+	@@unique([teacherId, studentId])
+}

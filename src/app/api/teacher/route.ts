@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { prisma } from "../../../lib/prisma";
+import { requireCurrentUser } from "../../../lib/current-user";
+import { apiError } from "../../../lib/api-errors";
+export async function POST(request: Request) { try { const student = await requireCurrentUser(); const body = await request.json() as { teacherId?: string }; if (!body.teacherId) return NextResponse.json({ error: "A teacher account is required." }, { status: 400 }); const relationship = await prisma.teacherRelationship.upsert({ where: { teacherId_studentId: { teacherId: body.teacherId, studentId: student.id } }, update: {}, create: { teacherId: body.teacherId, studentId: student.id, permissions: {}, status: "pending" } }); return NextResponse.json({ status: "real", data: relationship }, { status: 201 }); } catch (error) { return apiError(error); } }

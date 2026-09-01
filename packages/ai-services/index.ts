@@ -1,0 +1,15 @@
+import { RuleBasedWeakPointEngine } from "./weakpoint/real";
+import { RuleBasedLessonEngine } from "./lesson/real";
+import { BestEffortRecitationEngine } from "./recitation/real";
+import { KnownTrackAlignmentEngine } from "./alignment/real";
+import { VisionMockEngine } from "./vision/real";
+export const weakPointEngine = new RuleBasedWeakPointEngine();
+export const createWeakPointEngine = () => weakPointEngine;
+export const lessonEngine = new RuleBasedLessonEngine();
+export const createLessonEngine = () => lessonEngine;
+export const recitationEngine = new BestEffortRecitationEngine();
+export const createRecitationEngine = () => recitationEngine;
+export const alignmentEngine = new KnownTrackAlignmentEngine();
+export const createAlignmentEngine = () => alignmentEngine;
+export const visionEngine = new VisionMockEngine();
+export const createVisionEngine = () => visionEngine;

@@ -1,0 +1,2 @@
+export type NoorTheme = { name: "dawn" | "day" | "dusk" | "night"; accent: "teal" | "purple"; progress: number };
+export function getNoorTheme(input: { hour: number; progress?: number; prayer?: string }): NoorTheme { const progress = Math.max(0, Math.min(100, input.progress ?? 0)); const name = input.hour < 6 ? "night" : input.hour < 12 ? "dawn" : input.hour < 18 ? "day" : "dusk"; return { name, accent: input.prayer === "Asr" || input.prayer === "Maghrib" ? "purple" : "teal", progress }; }
