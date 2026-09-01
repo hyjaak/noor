@@ -71,6 +71,17 @@ export default function PrayerPage() {
           Change location
         </Link>
       </div>
+      <div className="info-band">
+        <span>◉</span>
+        <p>
+          <b>Ready to pray?</b>
+          <br />
+          <small>Salah Mode keeps a calm, distraction-free screen and remembers exactly where you stopped reading before each bow.</small>
+        </p>
+      </div>
+      <Link href="/salah" className="primary-button" style={{ marginTop: 14, width: "fit-content" }}>
+        Enter Salah Mode <span>→</span>
+      </Link>
       <section className="prayer-list glass-card">
         {rows.map((name) => {
           const time24 = data?.times?.[name];

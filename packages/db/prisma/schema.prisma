@@ -87,12 +87,14 @@ model DailyGoal {
 }
 
 model PrayerEvent {
-	id        String   @id @default(cuid())
-	userId    String
-	prayer    String
-	completed Boolean  @default(true)
-	createdAt DateTime @default(now())
-	user      User     @relation(fields: [userId], references: [id])
+	id         String   @id @default(cuid())
+	userId     String
+	prayer     String
+	completed  Boolean  @default(true)
+	rakahCount Int?
+	payload    Json     @default("{}")
+	createdAt  DateTime @default(now())
+	user       User     @relation(fields: [userId], references: [id])
 }
 
 model Habit {
