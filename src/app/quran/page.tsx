@@ -44,6 +44,10 @@ function QuranReader() {
   const [isPaused, setIsPaused] = useState(true);
   const [repeat, setRepeat] = useState(false);
   const [speed, setSpeed] = useState(1);
+  // Whether playback should continue onto the next page's first ayah once
+  // the current page's last ayah finishes -- on by default so listening
+  // doesn't stall on a manual "next page" click; easy to turn off.
+  const [autoAdvancePage, setAutoAdvancePage] = useState(true);
   // Which word (by index, within the currently-playing ayah) audio is on --
   // driven off the <audio> timeupdate event, so it stays correct at any
   // playbackRate (currentTime always reflects real media position).
@@ -86,13 +90,22 @@ function QuranReader() {
   }, []);
 
   const loadPage = useCallback(
-    (query: string, target?: { surah: number; ayah: number }) => {
+    (query: string, target?: { surah: number; ayah: number }, options?: { autoPlay?: boolean }) => {
       void fetch(`/api/quran?${query}`)
         .then((res) => res.json())
         .then((body: { data: PageData }) => {
           setPageData(body.data);
-          setPlayingIndex(null);
           const first = body.data.ayahs[0];
+          // Inlined rather than calling playAyah() -- loadPage is memoized
+          // with a stable dep list and shouldn't take on a changing dep just
+          // to start playback; this only touches stable refs/setters anyway.
+          if (options?.autoPlay && first) {
+            pendingSeekMs.current = null;
+            setActiveWordIndex(null);
+            setPlayingIndex(0);
+          } else {
+            setPlayingIndex(null);
+          }
           if (!first) return;
           const resolved =
             target && body.data.ayahs.some((item) => item.surah === target.surah && item.number === target.ayah)
@@ -249,8 +262,11 @@ function QuranReader() {
     }
     // speed intentionally excluded -- the speed <select> already updates
     // audioRef.current.playbackRate directly without replaying the ayah.
+    // pageData?.page is included so auto-advancing into a page whose first
+    // ayah happens to reuse index 0 (same as before) still retriggers --
+    // otherwise React would see an unchanged playingIndex and skip this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playingIndex]);
+  }, [playingIndex, pageData?.page]);
 
   const seekToWord = (index: number, word: WordTiming) => {
     if (playingIndex === index) {
@@ -286,17 +302,24 @@ function QuranReader() {
       return;
     }
     const nextIndex = playingIndex + 1;
-    if (nextIndex >= pageData.ayahs.length) {
-      setPlayingIndex(null);
+    if (nextIndex < pageData.ayahs.length) {
+      playAyah(nextIndex);
+      // Smooth, physically-eased scroll to the new ayah so auto-advance
+      // doesn't jump the page -- instant for prefers-reduced-motion.
+      const next = pageData.ayahs[nextIndex];
+      const el = ayahRefs.current.get(`${next.surah}:${next.number}`);
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
       return;
     }
-    playAyah(nextIndex);
-    // Smooth, physically-eased scroll to the new ayah so auto-advance
-    // doesn't jump the page -- instant for prefers-reduced-motion.
-    const next = pageData.ayahs[nextIndex];
-    const el = ayahRefs.current.get(`${next.surah}:${next.number}`);
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    // Last ayah of the page just finished.
+    if (autoAdvancePage && pageData.page < pageData.pageCount) {
+      // loadPage's own page-turn (the .mushaf-page remount) supplies the
+      // same motion as a manual "next page" click -- nothing extra needed.
+      loadPage(`page=${pageData.page + 1}`, undefined, { autoPlay: true });
+      return;
+    }
+    setPlayingIndex(null);
   };
 
   const onTouchStart = (event: React.TouchEvent) => {
@@ -478,6 +501,15 @@ function QuranReader() {
             style={{ color: repeat ? "var(--teal)" : undefined }}
           >
             ↻
+          </button>
+          <button
+            aria-label="Toggle auto-advance to next page"
+            title={autoAdvancePage ? "Auto-advance to next page: on" : "Auto-advance to next page: off"}
+            className={autoAdvancePage ? "active" : undefined}
+            onClick={() => setAutoAdvancePage(!autoAdvancePage)}
+            style={{ color: autoAdvancePage ? "var(--teal)" : undefined }}
+          >
+            ⏭
           </button>
           <select
             value={speed}
