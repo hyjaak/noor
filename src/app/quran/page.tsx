@@ -44,6 +44,7 @@ function QuranReader() {
   const [isPaused, setIsPaused] = useState(true);
   const [repeat, setRepeat] = useState(false);
   const [speed, setSpeed] = useState(1);
+  const [surahDrawerOpen, setSurahDrawerOpen] = useState(false);
   // Whether playback should continue onto the next page's first ayah once
   // the current page's last ayah finishes -- on by default so listening
   // doesn't stall on a manual "next page" click; easy to turn off.
@@ -336,6 +337,10 @@ function QuranReader() {
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSurahDrawerOpen(false);
+        return;
+      }
       if (!pageData) return;
       if (event.key === "ArrowRight") goToPage(pageData.page + 1);
       if (event.key === "ArrowLeft") goToPage(pageData.page - 1);
@@ -356,7 +361,15 @@ function QuranReader() {
             </p>
             <h1>Read with presence.</h1>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="reader-actions">
+            <button
+              aria-expanded={surahDrawerOpen}
+              aria-controls="surah-index"
+              className="quiet-button surah-index-toggle"
+              onClick={() => setSurahDrawerOpen(true)}
+            >
+              Surahs
+            </button>
             <button className="quiet-button" onClick={toggleTransliteration}>
               {showTransliteration ? "Hide transliteration" : "Show transliteration"}
             </button>
@@ -539,13 +552,29 @@ function QuranReader() {
         </div>
       </section>
 
-      <aside className="surah-list glass-card">
+      <button
+        aria-label="Close Surah Index"
+        className={surahDrawerOpen ? "surah-backdrop open" : "surah-backdrop"}
+        onClick={() => setSurahDrawerOpen(false)}
+      />
+      <aside
+        aria-hidden={!surahDrawerOpen}
+        aria-label="Surah Index"
+        className={surahDrawerOpen ? "surah-list glass-card open" : "surah-list glass-card"}
+        id="surah-index"
+      >
+        <button aria-label="Close Surah Index" className="surah-list-close" onClick={() => setSurahDrawerOpen(false)}>
+          ×
+        </button>
         <p className="eyebrow">SURAH INDEX</p>
         {surahIndex.map((surah) => (
           <button
             className={position?.surah === surah.number ? "surah-option active" : "surah-option"}
             key={surah.number}
-            onClick={() => goToPage(surah.page)}
+            onClick={() => {
+              goToPage(surah.page);
+              setSurahDrawerOpen(false);
+            }}
           >
             <span>{surah.number}</span>
             <span>
